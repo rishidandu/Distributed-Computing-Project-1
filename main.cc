@@ -1,31 +1,41 @@
+#include <future>
 #include <iostream>
 #include <numeric>
 #include <thread>
 #include <vector>
 
-#include "src/lib/utility.h"
+#include "utility.h"
 
 // A demo for creating two threads
 // Run this using one of the following methods:
 //  1. With bazel: bazel run src/main:main
 //  2. With plain g++: g++ -std=c++17 -lpthread GitHub/Distributed-Computing-Project-1/main.cc  -I ./
+
 int main() {
-  const int number_of_threads = 2;
-  const int number_of_elements = 1000 * 1000 * 1000;
-  const int step = number_of_elements / number_of_threads;
+  const int number_of_threads = 10;
+  uint64_t number_of_elements = 10 * 10 * 10;
+  uint64_t step = number_of_elements / number_of_threads;
+  std::vector<std::future<uint64_t>> tasks;
   std::vector<uint64_t> partial_sums(number_of_threads);
 
-  std::thread t1(AccumulateRange, std::ref(partial_sums[0]), 0, step);
-  std::thread t2(AccumulateRange, std::ref(partial_sums[1]), step,
-                 number_of_threads * step);
-
-  t1.join();
-  t2.join();
-
-  uint64_t total =
-      std::accumulate(partial_sums.begin(), partial_sums.end(), uint64_t(0));
-  PrintVector(partial_sums); // Prints partial_sums
-  std::cout << "total: " << total << std::endl;
+  for (uint64_t i = 0; i < number_of_threads; i++) {
+    tasks.push_back(std::async([i, step] {
+      uint64_t r = 0;
+      for (uint64_t j = i * step; j < (i + 1) * step; j++) {
+        r += j;
+      }
+      return r;
+    }));
+  }
+  uint64_t max = 0;
+  uint64_t total = 0;
+  for (auto &t : tasks) {
+    //std::cout << "total: " << total << std::endl;
+    std::cout << "total: " << t.get() << std::endl;
+    total += t.get();
+  }
+  //std::cout << "max: " << max << std::endl;
+  //std::cout << "total: " << total << std::endl;
 
   return 0;
 }
